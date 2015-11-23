@@ -13,6 +13,7 @@ var bl = require('bl');
 var express = require('express');
 var mentionBot = require('./mention-bot.js');
 var GitHubApi = require('github');
+var Q = require('q');
 var config = require('./package.json').config;
 
 if (!process.env.GITHUB_USER) {
@@ -35,6 +36,8 @@ if (!process.env.GITHUB_TOKEN) {
   console.error('6) Check that it commented here: https://github.com/fbsamples/bot-testing/pull/23');
   process.exit(1);
 }
+
+var githubUsers = [];
 
 var github = new GitHubApi({
   version: '3.0.0',
@@ -90,9 +93,9 @@ app.post('/', function(req, res) {
       }
 
       var reviewers = mentionBot.guessOwnersForPullRequest(
-        data.repository.html_url, // 'https://github.com/fbsamples/bot-testing'
-        data.pull_request.number, // 23
-        data.pull_request.user.login, // 'mention-bot'
+        data.repository.html_url,
+        data.pull_request.number,
+        data.pull_request.user.login,
         data.pull_request.base.ref,
         repoConfig
       );
@@ -103,14 +106,44 @@ app.post('/', function(req, res) {
         return res.end();
       }
 
-      github.issues.createComment({
-        user: data.repository.owner.login, // 'fbsamples'
-        repo: data.repository.name, // 'bot-testing'
-        number: data.pull_request.number, // 23
-        body: 'By analyzing the blame information on this pull request, we ' +
-          'identified ' + buildMentionSentence(reviewers) + ' to be' +
+      var promises = [];
+      var activeReviewers = [];
+      reviewers.forEach(function (reviewer) {
+        var def = Q.defer();
+        if (!githubUsers[reviewer]) {
+          github.user.getFrom({'user': reviewer}, function(err, data) {
+            if (err) {
+              console.log(err);
+            } else {
+              if (data.suspended_at) {
+                githubUsers[reviewer] = false;
+              } else {
+                githubUsers[reviewer] = true;
+                activeReviewers.push(reviewer);
+              }
+            }
+            def.resolve();
+          });
+        } else {
+          console.log("accessing cache");
+          if (githubUsers[reviewer]) {
+            activeReviewers.push(reviewer);
+          }
+          def.resolve();
+        }
+        promises.push(def.promise);
+      });
+
+      Q.all(promises).then(function() {
+        github.issues.createComment({
+          user: data.repository.owner.login,
+          repo: data.repository.name,
+          number: data.pull_request.number,
+          body: 'By analysing the blame information on this pull request, we ' +
+          'identified ' + buildMentionSentence(activeReviewers) + ' to be' +
           (reviewers.length > 1 ? '' : ' a') + ' potential ' +
           'reviewer' + (reviewers.length > 1 ? 's' : '') + '.'
+        });
       });
 
       return res.end();

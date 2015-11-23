@@ -145,7 +145,7 @@ function parseBlame(blame: string): Array<string> {
   // The way the document is structured is that commits and lines are
   // interleaved. So everytime we see a commit we grab the author's name
   // and everytime we see a line we log the last seen author.
-  var re = /(rel="(?:author|contributor)">([a-z0-9]+)<\/a> authored|<tr class="blame-line">)/g;
+  var re = /(rel="(?:author|contributor)">(.+)<\/a> authored|<tr class="blame-line">)/g;
 
   var currentAuthor = 'none';
   var lines = [];
