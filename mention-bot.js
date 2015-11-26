@@ -15,7 +15,7 @@ var githubAuthCookies = require('./githubAuthCookies');
 var fs = require('fs');
 
 var downloadFileSync = function(url: string, cookies: ?string): string {
-  var args = ['--verbose','-L', url];
+  var args = ['--silent', '-L', url];
 
   if (cookies) {
     args.push('-H', `Cookie: ${cookies}`);
@@ -246,20 +246,6 @@ function fetch(url: string): string {
 }
 
 /**
-  * Returns a new list of owners, with inelligible owners removed.
-  * An eligible owner must:
-  *   - not be in the userBlacklist in the provided config
-  */
-function getEligibleOwners(
-  owners: Array<string>,
-  config: Object
-): Array<string> {
-  return owners.filter(function(owner) {
-    return config.userBlacklist.indexOf(owner) < 0;
-  });
-}
-
-/**
  * The problem at hand is to find a set of three best effort people that have
  * context on a pull request. It doesn't (and actually can't) be perfect.
  *
@@ -303,7 +289,7 @@ function guessOwners(
     return !deletedOwnersSet.has(element);
   });
 
-  var concatOwners = []
+  return []
     .concat(deletedOwners)
     .concat(allOwners)
     .filter(function(owner) {
@@ -312,11 +298,10 @@ function guessOwners(
     .filter(function(owner) {
       return owner !== creator;
     })
+    .filter(function(owner) {
+      return config.userBlacklist.indexOf(owner) === -1;
+    })
     .slice(0, 3);
-
-  var eligibleOwners = getEligibleOwners(concatOwners, config);
-
-  return eligibleOwners.slice(0, 3);
 }
 
 function guessOwnersForPullRequest(
@@ -357,5 +342,5 @@ module.exports = {
   enableCachingForDebugging: false,
   parseDiff: parseDiff,
   parseBlame: parseBlame,
-  guessOwnersForPullRequest: guessOwnersForPullRequest
+  guessOwnersForPullRequest: guessOwnersForPullRequest,
 };

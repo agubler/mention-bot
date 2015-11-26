@@ -10,18 +10,16 @@
 require('babel-core/register');
 
 var bl = require('bl');
-var express = require('express');
-var mentionBot = require('./mention-bot.js');
-var GitHubApi = require('github');
-var Q = require('q');
 var config = require('./package.json').config;
+var express = require('express');
+var fs = require('fs');
+var mentionBot = require('./mention-bot.js');
+var messageGenerator = require('./message.js');
+var util = require('util');
+var Q = require('q');
+var GitHubApi = require('github');
 
-if (!process.env.GITHUB_USER) {
-  console.warn('There was no github user detected. This is fine, but mentionbot won\'t work with private repos.');
-  console.warn('To make mention-bot work with private repos, please expose GITHUB_USER and GITHUB_PASSWORD as environment variables. The user and password must have access to the private repo you want to use.');
-}
-
-var CONFIG_PATH = ".mention-bot";
+var CONFIG_PATH = '.mention-bot';
 
 if (!process.env.GITHUB_TOKEN) {
   console.error('The bot was started without a github account to post with.');
@@ -35,6 +33,19 @@ if (!process.env.GITHUB_TOKEN) {
   console.error('curl -X POST -d @__tests__/data/23.webhook http://localhost:5000/');
   console.error('6) Check that it commented here: https://github.com/fbsamples/bot-testing/pull/23');
   process.exit(1);
+}
+
+if (!process.env.GITHUB_USER) {
+	console.warn(
+		'There was no github user detected.',
+		'This is fine, but mention-bot won\'t work with private repos.'
+	);
+	console.warn(
+		'To make mention-bot work with private repos, please expose',
+		'GITHUB_USER and GITHUB_PASSWORD as environment variables.',
+		'The user and password must have access to the private repo',
+		'you want to use.'
+	);
 }
 
 var githubUsers = [];
@@ -65,12 +76,26 @@ function buildMentionSentence(reviewers) {
   );
 }
 
+function defaultMessageGenerator(reviewers) {
+  return util.format(
+    'By analyzing the blame information on this pull request' +
+     ', we identified %s to be%s potential reviewer%s',
+     buildMentionSentence(reviewers),
+     reviewers.length > 1 ? '' : ' a',
+     reviewers.length > 1 ? 's' : ''
+  );
+};
+
 app.post('/', function(req, res) {
   req.pipe(bl(function(err, body) {
     var data = {};
     try { data = JSON.parse(body.toString()); } catch (e) {}
 
     if (data.action !== 'opened') {
+      console.log(
+        'Skipping because action is ' + data.action + '.',
+        'We only care about opened.'
+      );
       return res.end();
     }
 
@@ -80,7 +105,7 @@ app.post('/', function(req, res) {
       repo: data.repository.name,
       path: CONFIG_PATH,
       headers: {
-        Accept: "application/vnd.github.v3.raw"
+        Accept: 'application/vnd.github.v3.raw'
       }
     }, function(err, configRes) {
       // default config
@@ -93,16 +118,17 @@ app.post('/', function(req, res) {
       }
 
       var reviewers = mentionBot.guessOwnersForPullRequest(
-        data.repository.html_url,
-        data.pull_request.number,
-        data.pull_request.user.login,
-        data.pull_request.base.ref,
+        data.repository.html_url, // 'https://github.com/fbsamples/bot-testing'
+        data.pull_request.number, // 23
+        data.pull_request.user.login, // 'mention-bot'
+        data.pull_request.base.ref, // 'master'
         repoConfig
       );
 
       console.log(data.pull_request.html_url, reviewers);
 
       if (reviewers.length === 0) {
+        console.log('Skipping because there are no reviewers found.');
         return res.end();
       }
 
@@ -135,15 +161,16 @@ app.post('/', function(req, res) {
       });
 
       Q.all(promises).then(function() {
-        github.issues.createComment({
-          user: data.repository.owner.login,
-          repo: data.repository.name,
-          number: data.pull_request.number,
-          body: 'By analysing the blame information on this pull request, we ' +
-          'identified ' + buildMentionSentence(activeReviewers) + ' to be' +
-          (reviewers.length > 1 ? '' : ' a') + ' potential ' +
-          'reviewer' + (reviewers.length > 1 ? 's' : '') + '.'
-        });
+	      github.issues.createComment({
+		      user: data.repository.owner.login, // 'fbsamples'
+		      repo: data.repository.name, // 'bot-testing'
+		      number: data.pull_request.number, // 23
+		      body: messageGenerator(
+			      activeReviewers,
+			      buildMentionSentence,
+			      defaultMessageGenerator
+		      )
+	      });
       });
 
       return res.end();
@@ -152,7 +179,10 @@ app.post('/', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.send('GitHub Mention Bot Active. Go to https://github.com/facebook/mention-bot for more information.');
+  res.send(
+    'GitHub Mention Bot Active. ' +
+    'Go to https://github.com/facebook/mention-bot for more information.'
+  );
 });
 
 app.set('port', process.env.PORT || 5000);

@@ -39,7 +39,7 @@ The problem of finding who the best reviewers are is really hard and I don't thi
 
 We use two heuristics:
 - If a line was deleted or modified, the person that last touched that line is likely going to care about this pull request.
-- If a person last touched many lines in the file where the change was made, s/he will want to be notified.
+- If a person last touched many lines in the file where the change was made, they will want to be notified.
 
 **Initialization**
 
@@ -76,6 +76,10 @@ npm start
 Alternatively, click the button below:
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
+## Configuring a custom message
+
+If you want to change the default message, you can write your custom logic in [message.js](https://github.com/facebook/mention-bot/blob/master/message.js).
 
 ## How to run the bot on GitHub Enterprise
 
