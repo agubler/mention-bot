@@ -91,7 +91,7 @@ app.post('/', function(req, res) {
     var data = {};
     try { data = JSON.parse(body.toString()); } catch (e) {}
 
-    if (data.action !== 'opened') {
+    if (data.action !== 'opened' && data.action !== 'reopened') {
       console.log(
         'Skipping because action is ' + data.action + '.',
         'We only care about opened.'
