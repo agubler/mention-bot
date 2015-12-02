@@ -6,7 +6,9 @@ Do you have a GitHub project that is too big for people to subscribe to all the 
 
 ## How To Use?
 
-- Go to your project on GitHub > Settings > Webhooks & services > Add Webhook
+- Go to
+ - your project on GitHub > Settings > Webhooks & services > Add Webhook or
+ - your organization on GitHub > Settings > Webhooks > Add Webhook  
 - Payload URL: `https://mention-bot.herokuapp.com/`
 - Let me select individual events > Check `Pull Request`
 - Add Webhook
@@ -29,7 +31,7 @@ For these, it will download the associated blame to figure out who last touched 
 
 <img width="923" src="https://cloud.githubusercontent.com/assets/197597/11022820/973166aa-861d-11e5-83b1-b05e8228f974.png">
 
-After running the [algorithm](#Algorithm) described in the next section, it will comment on the pull request notifying those people and go back to sleep.
+After running the [algorithm](#algorithm) described in the next section, it will comment on the pull request notifying those people and go back to sleep.
 
 <img width="769" src="https://cloud.githubusercontent.com/assets/197597/11022875/3e4949de-861f-11e5-8459-573a8dbc9013.png">
 
