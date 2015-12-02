@@ -151,7 +151,7 @@ function parseBlame(blame: string): Array<string> {
   // The way the document is structured is that commits and lines are
   // interleaved. So everytime we see a commit we grab the author's name
   // and everytime we see a line we log the last seen author.
-  var re = /(rel="(?:author|contributor)">([^<]+)<\/a> authored|<tr class="blame-line">)/g;
+  var re = /(rel="(?:author|contributor)">(.+)<\/a> authored|<tr class="blame-line">)/g;
 
   var currentAuthor = 'none';
   var lines = [];
@@ -328,7 +328,6 @@ function guessOwners(
     .filter(function(owner) {
       return config.userBlacklist.indexOf(owner) === -1;
     })
-    .slice(0, config.maxReviewers)
     .concat(defaultOwners)
     .filter(function(owner, index, ownersFound) {
       return ownersFound.indexOf(owner) === index;

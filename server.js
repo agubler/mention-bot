@@ -7,8 +7,6 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  */
 
-require('babel-core/register');
-
 var bl = require('bl');
 var config = require('./package.json').config;
 var express = require('express');
@@ -164,16 +162,19 @@ app.post('/', function(req, res) {
       });
 
       Q.all(promises).then(function() {
-	      github.issues.createComment({
-		      user: data.repository.owner.login, // 'fbsamples'
-		      repo: data.repository.name, // 'bot-testing'
-		      number: data.pull_request.number, // 23
-		      body: messageGenerator(
-			      activeReviewers,
-			      buildMentionSentence,
-			      defaultMessageGenerator
-		      )
-	      });
+        activeReviewers = activeReviewers.slice(0, repoConfig.maxReviewers);
+        if (activeReviewers.length > 0) {
+          github.issues.createComment({
+             user: data.repository.owner.login, // 'fbsamples'
+             repo: data.repository.name, // 'bot-testing'
+             number: data.pull_request.number, // 23
+             body: messageGenerator(
+                activeReviewers,
+                buildMentionSentence,
+                defaultMessageGenerator
+             )
+          });
+        }
       });
 
       return res.end();
